@@ -72,7 +72,8 @@ def _calcular_relatorio_por_periodo(cursor, data_inicio, data_fim):
     cursor.execute("SELECT COUNT(id) FROM vendas WHERE tipo_venda = 'entrega' AND data_hora BETWEEN ? AND ?", params)
     numero_vendas_entrega = cursor.fetchone()[0] or 0
 
-    valor_total_geral = total_vendas_estabelecimento + total_vendas_entrega_produtos + total_taxas_entrega
+    # CORREÇÃO: A taxa de entrega não é somada ao faturamento total.
+    valor_total_geral = total_vendas_estabelecimento + total_vendas_entrega_produtos
 
     return {
         "total_vendas_estabelecimento": total_vendas_estabelecimento,
@@ -82,10 +83,6 @@ def _calcular_relatorio_por_periodo(cursor, data_inicio, data_fim):
         "numero_vendas_estabelecimento": numero_vendas_estabelecimento,
         "numero_vendas_entrega": numero_vendas_entrega
     }
-@app.get("/", tags=["Health Check"])
-async def root():
-    """Endpoint raiz para a verificação de saúde do Render."""
-    return {"status": "API da Lanchonete está no ar!"}
 
 # --- Endpoints de Gerenciamento do Caixa ---
 @app.get("/caixa/status", tags=["Caixa"])
@@ -180,33 +177,34 @@ async def gerar_relatorio(data_inicio: date = None, data_fim: date = None):
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
 
+    query_filter = ""
+    params = ()
+
     if data_inicio and data_fim:
         # Adiciona a hora para cobrir o dia inteiro
         dt_inicio = datetime.combine(data_inicio, datetime.min.time())
         dt_fim = datetime.combine(data_fim, datetime.max.time())
         query_filter = " WHERE data_hora BETWEEN ? AND ?"
         params = (dt_inicio, dt_fim)
-    else:
-        query_filter = ""
-        params = ()
 
     # Métricas de vendas no estabelecimento
-    cursor.execute(f"SELECT SUM(valor_produtos) FROM vendas WHERE tipo_venda = 'estabelecimento'{query_filter.replace('WHERE', 'AND') if query_filter else ''}", params)
+    cursor.execute(f"SELECT SUM(valor_produtos) FROM vendas WHERE tipo_venda = 'estabelecimento'{query_filter.replace('WHERE', ' AND') if query_filter else ''}", params)
     total_vendas_estabelecimento = cursor.fetchone()[0] or 0.0
-    cursor.execute(f"SELECT COUNT(id) FROM vendas WHERE tipo_venda = 'estabelecimento'{query_filter.replace('WHERE', 'AND') if query_filter else ''}", params)
+    cursor.execute(f"SELECT COUNT(id) FROM vendas WHERE tipo_venda = 'estabelecimento'{query_filter.replace('WHERE', ' AND') if query_filter else ''}", params)
     numero_vendas_estabelecimento = cursor.fetchone()[0] or 0
 
     # Métricas de vendas por entrega
-    cursor.execute(f"SELECT SUM(valor_produtos) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', 'AND') if query_filter else ''}", params)
+    cursor.execute(f"SELECT SUM(valor_produtos) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', ' AND') if query_filter else ''}", params)
     total_vendas_entrega_produtos = cursor.fetchone()[0] or 0.0
-    cursor.execute(f"SELECT SUM(taxa_entrega) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', 'AND') if query_filter else ''}", params)
+    cursor.execute(f"SELECT SUM(taxa_entrega) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', ' AND') if query_filter else ''}", params)
     total_taxas_entrega = cursor.fetchone()[0] or 0.0
-    cursor.execute(f"SELECT COUNT(id) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', 'AND') if query_filter else ''}", params)
+    cursor.execute(f"SELECT COUNT(id) FROM vendas WHERE tipo_venda = 'entrega'{query_filter.replace('WHERE', ' AND') if query_filter else ''}", params)
     numero_vendas_entrega = cursor.fetchone()[0] or 0
     
     conn.close()
 
-    valor_total_geral = total_vendas_estabelecimento + total_vendas_entrega_produtos + total_taxas_entrega
+    # CORREÇÃO: A taxa de entrega não é somada ao faturamento total.
+    valor_total_geral = total_vendas_estabelecimento + total_vendas_entrega_produtos
 
     return {
         "total_vendas_estabelecimento": total_vendas_estabelecimento,
