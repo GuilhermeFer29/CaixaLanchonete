@@ -82,6 +82,10 @@ def _calcular_relatorio_por_periodo(cursor, data_inicio, data_fim):
         "numero_vendas_estabelecimento": numero_vendas_estabelecimento,
         "numero_vendas_entrega": numero_vendas_entrega
     }
+@app.get("/", tags=["Health Check"])
+async def root():
+    """Endpoint raiz para a verificação de saúde do Render."""
+    return {"status": "API da Lanchonete está no ar!"}
 
 # --- Endpoints de Gerenciamento do Caixa ---
 @app.get("/caixa/status", tags=["Caixa"])
