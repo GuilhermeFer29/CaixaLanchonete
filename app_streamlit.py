@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 
 # --- Configuração da Aplicação ---
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://caixalanchonete-2.onrender.com"
 
 st.set_page_config(
     page_title="Caixa da Lanchonete",
